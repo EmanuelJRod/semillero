@@ -5,7 +5,7 @@ import random
 import re
 from json import JSONDecodeError
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlsplit, urlunsplit
+from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 CATALOG_URL = "https://index.commoncrawl.org/collinfo.json"
@@ -152,18 +152,12 @@ def parse_records(body: str, suffix: str) -> list[str]:
         ):
             continue
 
-        normalized = urlunsplit(
-            (
-                parsed.scheme.lower(),
-                parsed.netloc.lower(),
-                parsed.path or "/",
-                parsed.query,
-                "",
-            )
-        )
         normalized_hostname = hostname.lower()
+        normalized = f"{parsed.scheme.lower()}://{normalized_hostname}/"
         current = urls_by_hostname.get(normalized_hostname)
-        if current is None or normalized < current:
+        if current is None or (
+            normalized.startswith("https://") and current.startswith("http://")
+        ):
             urls_by_hostname[normalized_hostname] = normalized
 
     return sorted(urls_by_hostname.values())

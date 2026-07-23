@@ -54,7 +54,11 @@ def test_parse_records_normalizes_filters_and_deduplicates_urls() -> None:
             json.dumps({"url": "HTTPS://WWW.Example.AR/path#fragment"}),
             json.dumps({"url": "https://www.example.ar/path"}),
             json.dumps({"url": "https://www.example.ar/another-path"}),
+            json.dumps({"url": "http://www.example.ar/older-path"}),
             json.dumps({"url": "http://other.ar"}),
+            json.dumps(
+                {"url": "https://user:password@secure.ar:8443/path?query=value"}
+            ),
             json.dumps({"url": "https://example.nz/"}),
             json.dumps({"url": "ftp://files.example.ar/data"}),
             json.dumps({"not_url": "https://ignored.ar/"}),
@@ -63,7 +67,8 @@ def test_parse_records_normalizes_filters_and_deduplicates_urls() -> None:
 
     assert commoncrawl.parse_records(records, ".ar") == [
         "http://other.ar/",
-        "https://www.example.ar/another-path",
+        "https://secure.ar/",
+        "https://www.example.ar/",
     ]
 
 
@@ -168,8 +173,8 @@ def test_collect_urls_tries_another_page_for_distinct_hosts(
     monkeypatch.setattr(commoncrawl.random, "sample", fake_sample)
 
     assert commoncrawl.collect_urls(".ar", 2) == [
-        "https://one.ar/path-a",
-        "https://two.ar/path",
+        "https://one.ar/",
+        "https://two.ar/",
     ]
 
 
