@@ -200,10 +200,9 @@ def collect_urls(
         if len(candidates) >= limit:
             break
 
-    if len(candidates) < limit:
+    if not candidates:
         raise CommonCrawlError(
-            f"Common Crawl returned only {len(candidates)} unique URLs "
-            f"for {suffix}; requested {limit}."
+            f"Common Crawl returned no unique URLs for {suffix}."
         )
 
-    return random.sample(sorted(candidates), limit)
+    return random.sample(sorted(candidates), min(limit, len(candidates)))

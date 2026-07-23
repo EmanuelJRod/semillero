@@ -178,6 +178,89 @@ def test_collect_urls_tries_another_page_for_distinct_hosts(
     ]
 
 
+def test_collect_urls_returns_fewer_urls_than_requested(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Return every available URL when fewer than the limit are found."""
+    responses = iter(
+        [
+            FakeResponse(
+                json.dumps(
+                    [
+                        {
+                            "cdx-api": (
+                                "https://index.commoncrawl.org/"
+                                "CC-MAIN-2026-25-index"
+                            )
+                        }
+                    ]
+                )
+            ),
+            FakeResponse(json.dumps({"pages": 1})),
+            FakeResponse(
+                "\n".join(
+                    [
+                        json.dumps({"url": "https://one.cba.gov.ar/path"}),
+                        json.dumps({"url": "https://two.cba.gov.ar/other"}),
+                    ]
+                )
+            ),
+        ]
+    )
+    monkeypatch.setattr(
+        commoncrawl,
+        "urlopen",
+        lambda request, timeout: next(responses),
+    )
+    monkeypatch.setattr(
+        commoncrawl.random,
+        "sample",
+        lambda population, limit: list(population)[:limit],
+    )
+
+    assert commoncrawl.collect_urls(".cba.gov.ar", 10) == [
+        "https://one.cba.gov.ar/",
+        "https://two.cba.gov.ar/",
+    ]
+
+
+def test_collect_urls_reports_when_no_unique_urls_are_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Report an error when index records yield no valid URLs."""
+    responses = iter(
+        [
+            FakeResponse(
+                json.dumps(
+                    [
+                        {
+                            "cdx-api": (
+                                "https://index.commoncrawl.org/"
+                                "CC-MAIN-2026-25-index"
+                            )
+                        }
+                    ]
+                )
+            ),
+            FakeResponse(json.dumps({"pages": 1})),
+            FakeResponse(json.dumps({"url": "https://outside.example/"})),
+        ]
+    )
+    monkeypatch.setattr(
+        commoncrawl,
+        "urlopen",
+        lambda request, timeout: next(responses),
+    )
+    monkeypatch.setattr(
+        commoncrawl.random,
+        "sample",
+        lambda population, limit: list(population)[:limit],
+    )
+
+    with pytest.raises(commoncrawl.CommonCrawlError, match="no unique URLs"):
+        commoncrawl.collect_urls(".cba.gov.ar", 10)
+
+
 @pytest.mark.parametrize("limit", [0, 101])
 def test_collect_urls_rejects_limit_outside_range(limit: int) -> None:
     """Reject limits that could be empty or overload the public API."""
