@@ -4,6 +4,7 @@ import argparse
 
 from .config import APP_NAME, VERSION
 from .generator import generate_seed_urls
+from .sources.crtsh import CrtshError, collect_domains as collect_crtsh_domains
 
 
 def _handle_version(_: argparse.Namespace) -> None:
@@ -20,6 +21,17 @@ def _handle_generate(args: argparse.Namespace) -> None:
 
     for url in seed_urls:
         print(url)
+
+
+def _handle_collect_crtsh(args: argparse.Namespace) -> None:
+    """Collect domain names from crt.sh."""
+    try:
+        domains = collect_crtsh_domains(args.domain)
+    except (CrtshError, ValueError) as error:
+        raise SystemExit(f"Error: {error}") from error
+
+    for domain in domains:
+        print(domain)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -45,6 +57,22 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Domain or URL used as the seed target.",
     )
     generate_parser.set_defaults(handler=_handle_generate)
+
+    collect_parser = subparsers.add_parser(
+        "collect",
+        help="Collect domain names from an external source.",
+    )
+    collect_subparsers = collect_parser.add_subparsers(dest="source")
+
+    crtsh_parser = collect_subparsers.add_parser(
+        "crtsh",
+        help="Collect domain names from crt.sh.",
+    )
+    crtsh_parser.add_argument(
+        "domain",
+        help="Domain used as the crt.sh search target.",
+    )
+    crtsh_parser.set_defaults(handler=_handle_collect_crtsh)
 
     return parser
 
