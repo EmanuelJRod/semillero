@@ -4,6 +4,10 @@ import argparse
 
 from .config import APP_NAME, VERSION
 from .generator import generate_seed_urls
+from .sources.certspotter import (
+    CertSpotterError,
+    collect_domains as collect_certspotter_domains,
+)
 from .sources.crtsh import CrtshError, collect_domains as collect_crtsh_domains
 
 
@@ -28,6 +32,17 @@ def _handle_collect_crtsh(args: argparse.Namespace) -> None:
     try:
         domains = collect_crtsh_domains(args.domain)
     except (CrtshError, ValueError) as error:
+        raise SystemExit(f"Error: {error}") from error
+
+    for domain in domains:
+        print(domain)
+
+
+def _handle_collect_certspotter(args: argparse.Namespace) -> None:
+    """Collect domain names from Cert Spotter."""
+    try:
+        domains = collect_certspotter_domains(args.domain)
+    except (CertSpotterError, ValueError) as error:
         raise SystemExit(f"Error: {error}") from error
 
     for domain in domains:
@@ -73,6 +88,16 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Domain used as the crt.sh search target.",
     )
     crtsh_parser.set_defaults(handler=_handle_collect_crtsh)
+
+    certspotter_parser = collect_subparsers.add_parser(
+        "certspotter",
+        help="Collect domain names from Cert Spotter.",
+    )
+    certspotter_parser.add_argument(
+        "domain",
+        help="Domain used as the Cert Spotter search target.",
+    )
+    certspotter_parser.set_defaults(handler=_handle_collect_certspotter)
 
     return parser
 

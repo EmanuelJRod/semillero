@@ -1,6 +1,12 @@
 """Utility functions for Semillero."""
 
+import re
 from urllib.parse import urlparse
+
+_DOMAIN_PATTERN = re.compile(
+    r"^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+"
+    r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+)
 
 
 def normalize_domain(value: str) -> str:
@@ -20,3 +26,8 @@ def normalize_domain(value: str) -> str:
         raise ValueError(f"Invalid domain: {value}")
 
     return domain.rstrip(".")
+
+
+def is_valid_domain(value: str) -> bool:
+    """Return whether a value has a valid DNS domain shape."""
+    return _DOMAIN_PATTERN.fullmatch(value) is not None
