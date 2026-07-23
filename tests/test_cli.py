@@ -84,3 +84,42 @@ def test_collect_certspotter_reports_source_errors(
 
     with pytest.raises(SystemExit, match="Error: Cert Spotter returned HTTP 429"):
         cli.main()
+
+
+def test_collect_commoncrawl_prints_observed_urls(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Print each random URL returned by Common Crawl."""
+    monkeypatch.setattr(
+        cli,
+        "collect_urls",
+        lambda suffix, limit: ["https://one.ar/", "https://two.ar/"],
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["semillero", "collect", "commoncrawl", ".ar", "--limit", "2"],
+    )
+
+    cli.main()
+
+    assert capsys.readouterr().out == "https://one.ar/\nhttps://two.ar/\n"
+
+
+def test_collect_commoncrawl_reports_source_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exit with a clear message when Common Crawl collection fails."""
+    def fail_collection(suffix: str, limit: int) -> list[str]:
+        raise cli.CommonCrawlError("Common Crawl returned HTTP 503.")
+
+    monkeypatch.setattr(cli, "collect_urls", fail_collection)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["semillero", "collect", "commoncrawl", ".ar"],
+    )
+
+    with pytest.raises(SystemExit, match="Error: Common Crawl returned HTTP 503"):
+        cli.main()

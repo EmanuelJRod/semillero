@@ -8,6 +8,7 @@ from .sources.certspotter import (
     CertSpotterError,
     collect_domains as collect_certspotter_domains,
 )
+from .sources.commoncrawl import CommonCrawlError, collect_urls
 from .sources.crtsh import CrtshError, collect_domains as collect_crtsh_domains
 
 
@@ -47,6 +48,17 @@ def _handle_collect_certspotter(args: argparse.Namespace) -> None:
 
     for domain in domains:
         print(domain)
+
+
+def _handle_collect_commoncrawl(args: argparse.Namespace) -> None:
+    """Collect random observed URLs from Common Crawl."""
+    try:
+        urls = collect_urls(args.suffix, args.limit)
+    except (CommonCrawlError, ValueError) as error:
+        raise SystemExit(f"Error: {error}") from error
+
+    for url in urls:
+        print(url)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -98,6 +110,22 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Domain used as the Cert Spotter search target.",
     )
     certspotter_parser.set_defaults(handler=_handle_collect_certspotter)
+
+    commoncrawl_parser = collect_subparsers.add_parser(
+        "commoncrawl",
+        help="Collect random URLs observed by Common Crawl.",
+    )
+    commoncrawl_parser.add_argument(
+        "suffix",
+        help="Domain suffix used as the search target, such as .ar.",
+    )
+    commoncrawl_parser.add_argument(
+        "--limit",
+        type=int,
+        default=10,
+        help="Number of URLs to return, from 1 to 100 (default: 10).",
+    )
+    commoncrawl_parser.set_defaults(handler=_handle_collect_commoncrawl)
 
     return parser
 
