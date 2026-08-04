@@ -9,22 +9,22 @@ description = "Generate seed URLs for domain discovery workflows."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+license-files = ["LICENSE"]
 keywords = [
-"cybersecurity",
-"reconnaissance",
-"subdomains",
-"dns",
-"osint",
+    "cybersecurity",
+    "reconnaissance",
+    "subdomains",
+    "dns",
+    "osint",
 ]
 classifiers = [
-"Development Status :: 3 - Alpha",
-"Environment :: Console",
-"Intended Audience :: Information Technology",
-"License :: OSI Approved :: MIT License",
-"Operating System :: OS Independent",
-"Programming Language :: Python :: 3",
-"Programming Language :: Python :: 3.11",
-"Topic :: Security",
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Security",
 ]
 
 [project.scripts]
