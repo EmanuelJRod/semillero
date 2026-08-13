@@ -1,92 +1,78 @@
-# 🌱 SEMILLERO 🌱
+# 🌱 Semillero
 
-**Y.A.D.S.**
-*Yet Another Domain Seeder.*
+**Yet Another Domain Seeder**
 
-*The name **Semillero** comes from a loose Spanish adaptation of the term **"seeder."** It reflects the project's purpose of generating the initial seeds for later reconnaissance workflows.*
+Semillero is a lightweight command-line tool for collecting domains and subdomains from multiple public sources.
 
-Semillero is a tool that centralizes, automates, and simplifies the collection of subdomains from multiple public sources.
+It was created to simplify the repetitive discovery phase of reconnaissance workflows by providing a single interface for querying different sources and producing normalized, deduplicated results.
 
-Its main goal is to generate normalized URL lists that can be used in subsequent analysis workflows.
+## Sources
 
-Currently, it uses public sources such as:
+Semillero currently collects data from:
 
-* crt.sh
-* CertSpotter
-* Common Crawl
+* **crt.sh** — Certificate Transparency logs
+* **Cert Spotter** — Certificate Transparency data
+* **Common Crawl** — Web crawl data
 
-**Semillero is not a scanner. It is a seed generator for reconnaissance workflows.**
-
----
+Sources can be queried individually or all together using `collect all`.
 
 ## Features
 
-- Collects subdomains from multiple public sources.
-- Produces a single deduplicated result list.
-- Generates normalized HTTP and HTTPS URL variants.
-- Accepts domains or URLs as input.
-- Normalizes the input automatically.
-- Simple command-line interface.
-- Designed to easily support additional data sources.
+* Collect domains and subdomains from multiple public sources.
+* Query a specific source or all available sources at once.
+* Process a single domain or multiple domains from a text file.
+* Normalize and deduplicate collected results.
+* Continue collecting when an individual source fails.
+* Simple CLI designed to work as part of reconnaissance workflows and command-line pipelines.
 
----
+## Basic usage
 
-## Requirements
-
-* Python 3.11 or later
-* Git (optional, for cloning the repository)
-
----
-
-## Installation
-
-Clone the repository:
+Collect from a specific source:
 
 ```bash
-git clone https://github.com/EmanuelJRod/semillero.git
-cd semillero
+semillero collect crtsh example.com
 ```
 
-Create a virtual environment:
+Collect from all available sources:
 
 ```bash
-python -m venv .venv
+semillero collect all example.com
 ```
 
-Activate the virtual environment.
-
-**Linux / macOS**
+Collect multiple domains from a text file:
 
 ```bash
-source .venv/bin/activate
+semillero collect all --input domains.txt
 ```
 
-**Windows (PowerShell)**
+The input file should contain one domain per line:
 
-```powershell
-.venv\Scripts\Activate.ps1
+```text
+example.com
+example.org
+example.net
 ```
 
-Install the project:
+The same file-based workflow can also be used with an individual source:
 
 ```bash
-pip install -e .
+semillero collect crtsh --input domains.txt
 ```
 
----
+## Why "Semillero"?
 
-## Verify the Installation
+The name comes from the concept of a **seeder**.
 
-Run:
+Semillero does not attempt to perform the entire reconnaissance process. Its purpose is to generate a useful initial set of domains and subdomains that can serve as input for other tools and further analysis.
+
+For example:
 
 ```bash
-semillero version
+semillero collect all --input domains.txt | httpx
 ```
-
-If the installation was successful, the application will display its current version.
 
 ## Disclaimer
 
-This project is intended for educational, research, and authorized security assessment purposes only.
+Semillero is intended for legitimate security research, authorized testing, and educational purposes.
 
-The author is not responsible for any misuse or damage caused by this software. Users are solely responsible for ensuring they have permission to test the systems they target.
+Users are responsible for ensuring that their use of the tool complies with applicable laws and that they have proper authorization when testing systems they do not own.
