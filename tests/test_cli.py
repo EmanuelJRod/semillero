@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from semillero import cli
+from semillero.sources.alienvault import AlienVaultError
 from semillero.sources.crtsh import CrtshError
 
 
@@ -127,6 +128,45 @@ def test_collect_commoncrawl_reports_source_errors(
         cli.main()
 
 
+def test_collect_alienvault_prints_collected_domains(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Dispatch AlienVault collection and print its results."""
+    monkeypatch.setattr(
+        cli,
+        "collect_alienvault_domains",
+        lambda domain, limit: ["api.example.com", "example.com"],
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["semillero", "collect", "alienvault", "example.com", "--limit", "2"],
+    )
+
+    cli.main()
+
+    assert capsys.readouterr().out == "api.example.com\nexample.com\n"
+
+
+def test_collect_alienvault_reports_source_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exit cleanly when AlienVault collection fails."""
+    def fail_collection(domain: str, limit: int) -> list[str]:
+        raise AlienVaultError("AlienVault OTX returned HTTP 500.")
+
+    monkeypatch.setattr(cli, "collect_alienvault_domains", fail_collection)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["semillero", "collect", "alienvault", "example.com"],
+    )
+
+    with pytest.raises(SystemExit, match="AlienVault OTX returned HTTP 500"):
+        cli.main()
+
+
 def test_collect_all_runs_every_registered_source_and_deduplicates_results(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -201,6 +241,85 @@ def test_collect_all_continues_after_a_source_error(
     output = capsys.readouterr()
     assert output.out == "result.example.com\n"
     assert output.err == f"Error [{failed_source.name}]: Source unavailable.\n"
+
+
+def test_collect_all_continues_when_alienvault_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Preserve other results when AlienVault reports a source error."""
+    alienvault_source = next(
+        source for source in cli.COLLECT_SOURCES if source.name == "alienvault"
+    )
+    crtsh_source = next(
+        source for source in cli.COLLECT_SOURCES if source.name == "crtsh"
+    )
+
+    def fail_alienvault(target: str, limit: int) -> list[str]:
+        raise AlienVaultError("AlienVault OTX returned HTTP 500.")
+
+    monkeypatch.setattr(
+        cli,
+        "COLLECT_SOURCES",
+        (
+            replace(
+                crtsh_source,
+                collect=lambda target, limit: ["www.example.com"],
+            ),
+            replace(alienvault_source, collect=fail_alienvault),
+        ),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["semillero", "collect", "all", "example.com"],
+    )
+
+    cli.main()
+
+    output = capsys.readouterr()
+    assert output.out == "www.example.com\n"
+    assert output.err == (
+        "Error [alienvault]: AlienVault OTX returned HTTP 500.\n"
+    )
+
+
+def test_collect_all_preserves_alienvault_results_when_other_sources_fail(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Return AlienVault results after simultaneous failures elsewhere."""
+    registered_sources: list[cli.CollectSource] = []
+    for source in cli.COLLECT_SOURCES:
+        if source.name == "alienvault":
+            collect = lambda target, limit: ["api.example.com"]
+        else:
+            def collect(
+                target: str,
+                limit: int,
+                source_name: str = source.name,
+                error_type: type[Exception] = source.errors[0],
+            ) -> list[str]:
+                raise error_type(f"{source_name} unavailable.")
+
+        registered_sources.append(replace(source, collect=collect))
+
+    monkeypatch.setattr(cli, "COLLECT_SOURCES", tuple(registered_sources))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["semillero", "collect", "all", "example.com"],
+    )
+
+    cli.main()
+
+    output = capsys.readouterr()
+    assert output.out == "api.example.com\n"
+    assert output.err.splitlines() == [
+        f"Error [{source.name}]: {source.name} unavailable."
+        for source in registered_sources
+        if source.name != "alienvault"
+    ]
 
 
 def test_collect_source_reads_trimmed_non_empty_targets_from_file(

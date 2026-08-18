@@ -2,50 +2,234 @@
 
 **Yet Another Domain Seeder**
 
-Semillero is a lightweight command-line tool for collecting domains and subdomains from multiple public sources.
+Semillero is a lightweight Python CLI tool for collecting domains and subdomains from multiple public sources.
 
-It was created to simplify the repetitive discovery phase of reconnaissance workflows by providing a single interface for querying different sources and producing normalized, deduplicated results.
+It was created to simplify the first stage of reconnaissance workflows by gathering potential targets from different sources, normalizing the results, and producing a single deduplicated list that can be passed to other tools.
 
-## Sources
-
-Semillero currently collects data from:
-
-* **crt.sh** — Certificate Transparency logs
-* **Cert Spotter** — Certificate Transparency data
-* **Common Crawl** — Web crawl data
-
-Sources can be queried individually or all together using `collect all`.
+The name **Semillero** comes from the concept of a *seeder*: its purpose is to generate a useful initial seed of information for further reconnaissance.
 
 ## Features
 
 * Collect domains and subdomains from multiple public sources.
-* Query a specific source or all available sources at once.
-* Process a single domain or multiple domains from a text file.
-* Normalize and deduplicate collected results.
-* Continue collecting when an individual source fails.
-* Simple CLI designed to work as part of reconnaissance workflows and command-line pipelines.
+* Run individual sources or all available sources at once.
+* Process multiple targets from an input file.
+* Normalize collected domains.
+* Deduplicate results automatically.
+* Limit the number of results returned by each source.
+* Continue collecting when an external source fails.
+* Simple command-line interface.
+* No API keys required for the currently supported sources.
 
-## Basic usage
+## Sources
 
-Collect from a specific source:
+Semillero currently supports:
+
+* **crt.sh** — Certificate Transparency logs.
+* **Cert Spotter** — Certificate Transparency data.
+* **Common Crawl** — URLs and domains found in Common Crawl indexes.
+* **AlienVault OTX** — Passive DNS information exposed by AlienVault Open Threat Exchange.
+
+External sources may occasionally return errors, rate limits, or become temporarily unavailable. Semillero handles source failures independently so that one unavailable source does not interrupt collection from the others.
+
+## Requirements
+
+* Python 3
+* `pip`
+* Git
+
+Using a Python virtual environment is recommended.
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/EmanuelJRod/semillero.git
+cd semillero
+```
+
+### Linux
+
+Create a virtual environment:
+
+```bash
+python3 -m venv .venv
+```
+
+Activate it:
+
+```bash
+source .venv/bin/activate
+```
+
+Upgrade pip:
+
+```bash
+python -m pip install --upgrade pip
+```
+
+Install Semillero:
+
+```bash
+python -m pip install -e .
+```
+
+Verify the installation:
+
+```bash
+semillero --help
+```
+
+When you return to the project later, activate the environment again with:
+
+```bash
+source .venv/bin/activate
+```
+
+### Windows
+
+Open PowerShell inside the cloned repository.
+
+Create a virtual environment:
+
+```powershell
+py -m venv .venv
+```
+
+Activate it:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Upgrade pip:
+
+```powershell
+python -m pip install --upgrade pip
+```
+
+Install Semillero:
+
+```powershell
+python -m pip install -e .
+```
+
+Verify the installation:
+
+```powershell
+semillero --help
+```
+
+When you return to the project later, activate the environment again with:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+> If PowerShell prevents the activation script from running because of the execution policy, you can allow scripts for the current PowerShell session with:
+>
+> ```powershell
+> Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+> ```
+>
+> Then run the activation command again.
+
+## Usage
+
+### Generate URL variants
+
+Generate common HTTP/HTTPS and `www` variants for a domain:
+
+```bash
+semillero generate example.com
+```
+
+Example output:
+
+```text
+http://example.com
+https://example.com
+http://www.example.com
+https://www.example.com
+```
+
+### Collect from a specific source
+
+Use:
+
+```bash
+semillero collect <source> <domain>
+```
+
+For example:
 
 ```bash
 semillero collect crtsh example.com
 ```
 
-Collect from all available sources:
+Available sources:
+
+```text
+crtsh
+certspotter
+commoncrawl
+alienvault
+```
+
+Examples:
+
+```bash
+semillero collect certspotter example.com
+semillero collect commoncrawl example.com
+semillero collect alienvault example.com
+```
+
+### Collect from all sources
+
+Run every available source against the same target:
 
 ```bash
 semillero collect all example.com
 ```
 
-Collect multiple domains from a text file:
+Semillero combines the results and removes duplicates.
 
-```bash
-semillero collect all --input domains.txt
+Sources are treated independently. If one source is temporarily unavailable or rate-limited, Semillero reports the error and continues collecting from the remaining sources.
+
+For example:
+
+```text
+Error [crtsh]: crt.sh returned HTTP 502.
+Error [certspotter]: Cert Spotter returned HTTP 429.
 ```
 
-The input file should contain one domain per line:
+These errors do not prevent other available sources from completing.
+
+### Limit results
+
+Use `--limit` to restrict the number of results collected from a source:
+
+```bash
+semillero collect crtsh example.com --limit 100
+```
+
+The option can also be used with `all`:
+
+```bash
+semillero collect all example.com --limit 100
+```
+
+### Process multiple domains
+
+Semillero can read targets from a file instead of processing them individually.
+
+For example, create:
+
+```text
+targets.txt
+```
+
+with:
 
 ```text
 example.com
@@ -53,26 +237,52 @@ example.org
 example.net
 ```
 
-The same file-based workflow can also be used with an individual source:
+Then run:
 
 ```bash
-semillero collect crtsh --input domains.txt
+semillero collect all --input targets.txt
 ```
 
-## Why "Semillero"?
+Semillero processes each target using the available collection sources.
 
-The name comes from the concept of a **seeder**.
+## Development
 
-Semillero does not attempt to perform the entire reconnaissance process. Its purpose is to generate a useful initial set of domains and subdomains that can serve as input for other tools and further analysis.
-
-For example:
+Install the project in editable mode:
 
 ```bash
-semillero collect all --input domains.txt | httpx
+python -m pip install -e .
 ```
+
+Install the development dependencies:
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
+Run the test suite:
+
+```bash
+python -m pytest
+```
+
+## Project Philosophy
+
+Semillero is intentionally small.
+
+The project focuses on doing one job well: generating a useful seed of domains and subdomains for reconnaissance workflows.
+
+New sources and features should keep the CLI simple, preserve predictable output, and avoid unnecessary complexity.
 
 ## Disclaimer
 
-Semillero is intended for legitimate security research, authorized testing, and educational purposes.
+Semillero is intended for legitimate security research, reconnaissance, educational purposes, and authorized security testing.
 
-Users are responsible for ensuring that their use of the tool complies with applicable laws and that they have proper authorization when testing systems they do not own.
+Only use this tool against systems and organizations you are authorized to assess.
+
+The author is not responsible for misuse or damage caused by this software.
+
+## License
+
+This project is licensed under the MIT License.
+
+See the `LICENSE` file for details.

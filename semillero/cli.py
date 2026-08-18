@@ -8,6 +8,10 @@ from typing import Callable
 
 from .config import APP_NAME, VERSION
 from .generator import generate_seed_urls
+from .sources.alienvault import (
+    AlienVaultError,
+    collect_domains as collect_alienvault_domains,
+)
 from .sources.certspotter import (
     CertSpotterError,
     collect_domains as collect_certspotter_domains,
@@ -43,6 +47,11 @@ def _collect_commoncrawl(target: str, limit: int) -> list[str]:
     return collect_urls(target, limit)
 
 
+def _collect_alienvault(target: str, limit: int) -> list[str]:
+    """Collect results from AlienVault OTX."""
+    return collect_alienvault_domains(target, limit)
+
+
 COLLECT_SOURCES = (
     CollectSource(
         name="crtsh",
@@ -64,6 +73,14 @@ COLLECT_SOURCES = (
         target_help="Domain suffix used as the search target, such as .ar.",
         collect=_collect_commoncrawl,
         errors=(CommonCrawlError, ValueError),
+        supports_limit=True,
+    ),
+    CollectSource(
+        name="alienvault",
+        help="Collect domain names from AlienVault OTX.",
+        target_help="Domain used as the AlienVault OTX search target.",
+        collect=_collect_alienvault,
+        errors=(AlienVaultError, ValueError),
         supports_limit=True,
     ),
 )
